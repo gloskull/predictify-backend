@@ -116,6 +116,20 @@ export const markets = pgTable("markets", {
   version: integer("version").notNull().default(1),
 });
 
+export const marketComments = pgTable("market_comments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  marketId: text("market_id")
+    .notNull()
+    .references(() => markets.id),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const marketAuditLog = pgTable("market_audit_log", {
   id: uuid("id").primaryKey().defaultRandom(),
   marketId: text("market_id")

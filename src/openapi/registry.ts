@@ -257,6 +257,60 @@ registry.registerPath({
   },
 });
 
+// ── /api/markets/{id}/comments ───────────────────────────────────────────────
+
+const MarketComment = z
+  .object({
+    id: z.string().uuid(),
+    marketId: z.string(),
+    userId: z.string().uuid(),
+    content: z.string(),
+    createdAt: z.string().datetime(),
+  })
+  .openapi("MarketComment");
+
+const CreateCommentRequest = z
+  .object({
+    content: z.string().min(1).max(1000),
+  })
+  .openapi("CreateCommentRequest");
+
+registry.registerPath({
+  method: "post",
+  path: "/api/markets/{id}/comments",
+  tags: ["Markets"],
+  summary: "Add a comment to a market",
+  security: [{ bearerAuth: [] }],
+  request: {
+    params: z.object({ id: z.string() }),
+    body: { content: { "application/json": { schema: CreateCommentRequest } } },
+  },
+  responses: {
+    201: {
+      description: "Comment created",
+      content: {
+        "application/json": { schema: z.object({ data: MarketComment }) },
+      },
+    },
+    400: {
+      description: "Validation error",
+      content: { "application/json": { schema: ValidationErrorBody } },
+    },
+    401: {
+      description: "Unauthorized",
+      content: { "application/json": { schema: ErrorBody } },
+    },
+    404: {
+      description: "Market not found",
+      content: { "application/json": { schema: ErrorBody } },
+    },
+    429: {
+      description: "Rate limit exceeded",
+      content: { "application/json": { schema: ErrorBody } },
+    },
+  },
+});
+
 // ── /api/markets/{id}/disputes ───────────────────────────────────────────────
 
 const OpenDisputeRequest = z

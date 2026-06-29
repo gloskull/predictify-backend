@@ -29,6 +29,7 @@ describe("GET /api/markets", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
+      authenticatedAs: null,
       data: [
         {
           id: "market-1",

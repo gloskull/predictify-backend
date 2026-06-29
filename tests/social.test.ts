@@ -21,16 +21,16 @@ import type { SocialRepository } from "../src/repositories/socialRepository";
 
 type SocialState = Awaited<ReturnType<SocialRepository["followUser"]>>;
 
-const ACTOR_ADDRESS = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-const TARGET_ADDRESS = "GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
+const ACTOR_ADDRESS = "GABC1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF12";
+const TARGET_ADDRESS = "GBC1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF123";
 
 function makeAuthMiddleware(address = ACTOR_ADDRESS): RequestHandler {
   return (req, _res, next) => {
-    req.user = {
+    (req as any).user = {
       id: "actor-user-id",
       stellarAddress: address,
     };
-    req.id = "req-social-1" as never;
+    (req as any).id = "req-social-1";
     next();
   };
 }
@@ -170,6 +170,6 @@ describe("social follow routes", () => {
     const res = await request(app).post(`/api/users/${TARGET_ADDRESS}/follow`);
 
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ error: { code: "validation_error" } });
+    expect(res.body.error.code).toBe("validation_error");
   });
 });

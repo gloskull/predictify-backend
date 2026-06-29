@@ -1,14 +1,17 @@
 import { Router } from "express";
 import { listMarkets, getMarketById, updateMarket, VersionConflictError } from "../services/marketService";
+import { commentsRouter } from "./markets/comments";
 import { searchMarkets } from "../repositories/marketRepository";
 import { requireAdmin, AuthenticatedRequest } from "../middleware/auth";
 import { rateLimitAnon } from "../middleware/rateLimitAnon";
+import { optionalAuth } from "../middleware/requireAuth";
 import { z } from "zod";
 import { logger } from "../config/logger";
 
 export const marketsRouter = Router();
 
 marketsRouter.use(rateLimitAnon);
+marketsRouter.use("/:id/comments", commentsRouter);
 
 const patchMarketSchema = z.object({
   question: z.string().optional(),
@@ -68,13 +71,23 @@ marketsRouter.get("/search", async (req, res, next) => {
   }
 });
 
-marketsRouter.get("/", async (req, res, next) => {
+marketsRouter.get("/", optionalAuth, async (req, res, next) => {
   try {
-    if (req.query.limit !== undefined && (isNaN(Number(req.query.limit)) || Number(req.query.limit) > 100)) {
+    if (
+      req.query.limit !== undefined &&
+      (isNaN(Number(req.query.limit)) || Number(req.query.limit) > 100)
+    ) {
       return res.status(400).json({ error: { code: "invalid_query" } });
     }
-    return res.json({ data: await listMarkets() });
-  } catch (e) { return next(e); }
+    return res.json({
+      data: await listMarkets(),
+      authenticatedAs: (req as any).user
+        ? { id: (req as any).user.id, stellarAddress: (req as any).user.stellarAddress }
+        : null,
+    });
+  } catch (e) {
+    return next(e);
+  }
 });
 
 marketsRouter.get("/:id", async (req, res, next) => {
