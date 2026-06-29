@@ -23,7 +23,7 @@ export function createDbCursorStore(db: Database): CursorStore {
     },
 
     async commit(events: IndexedEvent[], newLedger: number): Promise<void> {
-      await db.transaction(async (tx) => {
+      await db.transaction(async (tx: any) => {
         if (events.length > 0) {
           await tx
             .insert(contractEvents)

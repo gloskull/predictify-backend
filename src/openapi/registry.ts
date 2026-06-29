@@ -449,6 +449,44 @@ registry.registerPath({
   },
 });
 
+const UserPortfolio = z
+  .object({
+    totalAmountStaked: z.string(),
+    activePredictionsCount: z.number().int(),
+    totalClaimedAmount: z.string(),
+  })
+  .openapi("UserPortfolio");
+
+registry.registerPath({
+  method: "get",
+  path: "/api/users/{address}/portfolio",
+  tags: ["Users"],
+  summary: "Get aggregated portfolio for a Stellar address",
+  request: {
+    params: z.object({ address: z.string() }),
+  },
+  responses: {
+    200: {
+      description: "User portfolio",
+      content: {
+        "application/json": {
+          schema: z.object({
+            data: UserPortfolio,
+          }),
+        },
+      },
+    },
+    400: {
+      description: "Invalid address",
+      content: { "application/json": { schema: ErrorBody } },
+    },
+    404: {
+      description: "User not found",
+      content: { "application/json": { schema: ErrorBody } },
+    },
+  },
+});
+
 // ── /api/predictions ─────────────────────────────────────────────────────────
 
 registry.registerPath({

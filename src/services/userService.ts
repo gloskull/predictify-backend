@@ -1,7 +1,8 @@
 import { db } from "../db/client";
 import { users, predictions, markets, claims } from "../db/schema";
-import { and, eq, desc, lt, count } from "drizzle-orm";
+import { and, eq, desc, lt, count, sql } from "drizzle-orm";
 import { Result, ok, err } from "../errors/RouteError";
+import { redisConnection } from "../queue";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -31,6 +32,58 @@ export interface UserProfile {
   joinedAt: string;
   predictions: PredictionEntry[];
   totals: ProfileTotals;
+}
+
+export interface UserPortfolio {
+  totalAmountStaked: string;
+  activePredictionsCount: number;
+  totalClaimedAmount: string;
+}
+
+export async function getUserPortfolio(
+  stellarAddress: string,
+): Promise<Result<UserPortfolio>> {
+  const cacheKey = `portfolio:${stellarAddress}`;
+  const cached = await redisConnection.get(cacheKey);
+
+  if (cached) {
+    return ok(JSON.parse(cached));
+  }
+
+  const user = await getUserByAddress(stellarAddress);
+  if (!user) {
+    return err({
+      kind: "NotFound",
+      message: "User not found",
+      resource: "User",
+    });
+  }
+
+  const [stakedResult, activeCountResult, claimedResult] = await Promise.all([
+    db
+      .select({ total: sql<string>`coalesce(sum(cast(${predictions.amount} as numeric)), 0)` })
+      .from(predictions)
+      .where(eq(predictions.userId, user.id)),
+    db
+      .select({ count: count() })
+      .from(predictions)
+      .innerJoin(markets, eq(predictions.marketId, markets.id))
+      .where(and(eq(predictions.userId, user.id), eq(markets.status, "active"))),
+    db
+      .select({ total: sql<string>`coalesce(sum(cast(${claims.amount} as numeric)), 0)` })
+      .from(claims)
+      .where(eq(claims.userId, user.id)),
+  ]);
+
+  const portfolio: UserPortfolio = {
+    totalAmountStaked: stakedResult[0]?.total ?? "0",
+    activePredictionsCount: Number(activeCountResult[0]?.count ?? 0),
+    totalClaimedAmount: claimedResult[0]?.total ?? "0",
+  };
+
+  await redisConnection.setex(cacheKey, 60, JSON.stringify(portfolio));
+
+  return ok(portfolio);
 }
 
 export async function getUserProfile(

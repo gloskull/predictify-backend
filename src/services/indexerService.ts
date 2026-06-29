@@ -18,6 +18,30 @@ export interface IndexerEventInput {
   payload?: unknown;
 }
 
+export interface IndexedEvent {
+  id: string;
+  ledger: number;
+  contractId: string;
+  type: string;
+  txHash: string;
+  ledgerClosedAt: Date;
+  topic: string[];
+  value: string;
+}
+
+export interface CursorStore {
+  loadLedger(): Promise<number | null>;
+  commit(events: IndexedEvent[], newLedger: number): Promise<void>;
+}
+
+export interface PollDeps {
+  rpc: rpc.Server;
+  store: CursorStore;
+  contractId: string;
+  startLedger: number;
+  logger: any;
+}
+
 export interface SorobanRpcClient {
   getLatestLedger(): Promise<number>;
   getEvents(startLedger: number, endLedger: number): Promise<IndexerEventInput[]>;
